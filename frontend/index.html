@@ -130,9 +130,25 @@
 
                 if (response.ok) {
                     isIndexed = true;
-                    statusDiv.innerHTML = `<span class="success">✅ ${data.message}<br>
-                        📊 Documents processed: ${data.documents_processed}<br>
-                        📦 Total chunks indexed: ${data.chunks_indexed}</span>`;
+                    let statusHtml = `<span class="success">✅ ${data.message}<br>
+                        📊 Documents processed: ${data.documents_processed}`;
+                    
+                    if (data.total_documents) {
+                        statusHtml += ` / ${data.total_documents}`;
+                    }
+                    
+                    statusHtml += `<br>📦 Total chunks indexed: ${data.chunks_indexed}</span>`;
+                    
+                    // Show warnings if any documents failed
+                    if (data.warnings && data.warnings.failed_documents) {
+                        statusHtml += '<div class="warning-box"><strong>⚠️ Warnings:</strong><ul>';
+                        data.warnings.failed_documents.forEach(doc => {
+                            statusHtml += `<li><strong>${doc.name}:</strong> ${doc.error}</li>`;
+                        });
+                        statusHtml += '</ul></div>';
+                    }
+                    
+                    statusDiv.innerHTML = statusHtml;
                     
                     // Enable chat
                     document.getElementById('question').disabled = false;
@@ -144,10 +160,37 @@
                     // Refresh document list
                     await listDocuments();
                 } else {
-                    statusDiv.innerHTML = `<span class="error">❌ Error: ${data.detail}</span>`;
+                    // Handle detailed error responses
+                    let errorHtml = '<span class="error">';
+                    
+                    if (data.detail && typeof data.detail === 'object') {
+                        errorHtml += `❌ <strong>${data.detail.error || 'Error'}</strong><br>`;
+                        errorHtml += `${data.detail.message}<br>`;
+                        
+                        if (data.detail.steps) {
+                            errorHtml += '<br><strong>Steps to fix:</strong><ul>';
+                            data.detail.steps.forEach(step => {
+                                errorHtml += `<li>${step}</li>`;
+                            });
+                            errorHtml += '</ul>';
+                        }
+                        
+                        if (data.detail.failed_documents) {
+                            errorHtml += '<br><strong>Failed documents:</strong><ul>';
+                            data.detail.failed_documents.forEach(doc => {
+                                errorHtml += `<li>${doc.name}: ${doc.error}</li>`;
+                            });
+                            errorHtml += '</ul>';
+                        }
+                    } else {
+                        errorHtml += `❌ Error: ${data.detail || 'Unknown error'}`;
+                    }
+                    
+                    errorHtml += '</span>';
+                    statusDiv.innerHTML = errorHtml;
                 }
             } catch (error) {
-                statusDiv.innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+                statusDiv.innerHTML = `<span class="error">❌ Network Error: ${error.message}<br>Please check your connection and try again.</span>`;
             } finally {
                 indexBtn.disabled = false;
                 indexBtn.textContent = '📥 Index All Documents';
@@ -259,10 +302,32 @@
                         }
                     }
                 } else {
-                    addMessage(`Error: ${data.detail}`, 'bot');
+                    // Handle detailed error responses
+                    let errorMsg = 'Error: ';
+                    
+                    if (data.detail && typeof data.detail === 'object') {
+                        errorMsg += `<strong>${data.detail.error || 'Unknown Error'}</strong><br>${data.detail.message}`;
+                        
+                        if (data.detail.steps) {
+                            errorMsg += '<br><br><strong>Try this:</strong><ul>';
+                            data.detail.steps.forEach(step => {
+                                errorMsg += `<li>${step}</li>`;
+                            });
+                            errorMsg += '</ul>';
+                        }
+                        
+                        // Special handling for rate limits
+                        if (data.detail.retry_after) {
+                            errorMsg += `<br><em>Please retry after: ${data.detail.retry_after}</em>`;
+                        }
+                    } else {
+                        errorMsg += data.detail || 'Unknown error occurred';
+                    }
+                    
+                    addMessage(errorMsg, 'bot');
                 }
             } catch (error) {
-                addMessage(`Error: ${error.message}`, 'bot');
+                addMessage(`Network Error: ${error.message}<br>Please check your connection and try again.`, 'bot');
             } finally {
                 sendBtn.disabled = false;
                 sendBtn.textContent = 'Send';
