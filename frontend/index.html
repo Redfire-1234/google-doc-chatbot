@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Docs Knowledge Chatbot</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📚 Google Docs Knowledge Bot</h1>
+            <p class="subtitle">Ask questions about your Google Drive folder</p>
+        </div>
+
+        <div class="index-section">
+            <h3>📁 Folder-Based RAG System</h3>
+            
+            <div class="info-box">
+                <p><strong>How it works:</strong></p>
+                <ol>
+                    <li>Share a Google Drive folder with your service account</li>
+                    <li>Add Google Docs to that folder</li>
+                    <li>Click "Index All Documents" below</li>
+                    <li>Ask questions - the bot searches across ALL your docs!</li>
+                </ol>
+            </div>
+
+            <div class="button-group">
+                <button onclick="indexAllDocuments()" id="index-all-btn" class="btn btn-primary">
+                    📥 Index All Documents
+                </button>
+                <button onclick="listDocuments()" id="list-btn" class="btn btn-secondary">
+                    📋 View Documents
+                </button>
+                <button onclick="reindexAll()" id="reindex-btn" class="btn btn-tertiary">
+                    🔄 Re-Index
+                </button>
+            </div>
+
+            <div id="index-status" class="status-message"></div>
+            
+            <div id="documents-list" class="documents-container"></div>
+        </div>
+
+        <div class="chat-section">
+            <h3>💬 Ask Questions</h3>
+            <div class="chat-container">
+                <div class="messages" id="messages">
+                    <div class="message bot-message">
+                        <div class="message-content">
+                            👋 Hello! I can answer questions about all documents in your Google Drive folder.<br><br>
+                            Click "Index All Documents" to get started!
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-area">
+                <input 
+                    type="text" 
+                    id="question" 
+                    placeholder="Ask a question about your documents..."
+                    class="question-input"
+                    onkeypress="handleKeyPress(event)"
+                />
+                <button onclick="sendMessage()" id="send-btn" class="btn btn-secondary">
+                    Send
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isIndexed = false;
+        let conversationHistory = [];  // Store last 5 exchanges
+
+        async function listDocuments() {
+            const listBtn = document.getElementById('list-btn');
+            const docsList = document.getElementById('documents-list');
+            
+            listBtn.disabled = true;
+            listBtn.textContent = 'Loading...';
+            docsList.innerHTML = '<div class="loading">Fetching documents...</div>';
+
+            try {
+                const response = await fetch('/documents');
+                const docs = await response.json();
+
+                if (response.ok) {
+                    if (docs.length === 0) {
+                        docsList.innerHTML = '<div class="info">No documents found in the configured folder.</div>';
+                    } else {
+                        let html = '<div class="docs-header">📄 Documents in Folder:</div><ul class="docs-list">';
+                        docs.forEach(doc => {
+                            const status = doc.indexed ? '✅' : '⏳';
+                            html += `<li>${status} <strong>${doc.name}</strong><br><small>Modified: ${new Date(doc.modified).toLocaleString()}</small></li>`;
+                        });
+                        html += '</ul>';
+                        docsList.innerHTML = html;
+                    }
+                } else {
+                    docsList.innerHTML = `<div class="error">Error: ${docs.detail}</div>`;
+                }
+            } catch (error) {
+                docsList.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            } finally {
+                listBtn.disabled = false;
+                listBtn.textContent = '📋 View Documents';
+            }
+        }
+
+        async function indexAllDocuments() {
+            const statusDiv = document.getElementById('index-status');
+            const indexBtn = document.getElementById('index-all-btn');
+            
+            indexBtn.disabled = true;
+            indexBtn.textContent = '⏳ Indexing...';
+            statusDiv.innerHTML = '<span class="info">🔄 Indexing all documents in your folder... This may take a minute.</span>';
+
+            try {
+                const response = await fetch('/index-all', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    isIndexed = true;
+                    statusDiv.innerHTML = `<span class="success">✅ ${data.message}<br>
+                        📊 Documents processed: ${data.documents_processed}<br>
+                        📦 Total chunks indexed: ${data.chunks_indexed}</span>`;
+                    
+                    // Enable chat
+                    document.getElementById('question').disabled = false;
+                    document.getElementById('send-btn').disabled = false;
+                    
+                    // Clear conversation history on new index
+                    conversationHistory = [];
+                    
+                    // Refresh document list
+                    await listDocuments();
+                } else {
+                    statusDiv.innerHTML = `<span class="error">❌ Error: ${data.detail}</span>`;
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+            } finally {
+                indexBtn.disabled = false;
+                indexBtn.textContent = '📥 Index All Documents';
+            }
+        }
+
+        async function reindexAll() {
+            if (!confirm('This will re-index all documents. Continue?')) {
+                return;
+            }
+
+            const statusDiv = document.getElementById('index-status');
+            const reindexBtn = document.getElementById('reindex-btn');
+            
+            reindexBtn.disabled = true;
+            reindexBtn.textContent = '⏳ Re-indexing...';
+            statusDiv.innerHTML = '<span class="info">🔄 Re-indexing all documents...</span>';
+
+            try {
+                const response = await fetch('/reindex', {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    isIndexed = true;
+                    statusDiv.innerHTML = `<span class="success">✅ Re-indexing complete!<br>
+                        📊 Documents: ${data.documents_processed}<br>
+                        📦 Chunks: ${data.chunks_indexed}</span>`;
+                    
+                    // Clear conversation history on re-index
+                    conversationHistory = [];
+                    
+                    await listDocuments();
+                } else {
+                    statusDiv.innerHTML = `<span class="error">❌ Error: ${data.detail}</span>`;
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+            } finally {
+                reindexBtn.disabled = false;
+                reindexBtn.textContent = '🔄 Re-Index';
+            }
+        }
+
+        async function sendMessage() {
+            const question = document.getElementById('question').value.trim();
+            const sendBtn = document.getElementById('send-btn');
+            
+            if (!question) {
+                return;
+            }
+
+            if (!isIndexed) {
+                addMessage('Please index documents first by clicking "Index All Documents"!', 'bot');
+                return;
+            }
+
+            // Add user message
+            addMessage(question, 'user');
+            document.getElementById('question').value = '';
+
+            // Disable send button
+            sendBtn.disabled = true;
+            sendBtn.textContent = 'Thinking...';
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        question: question,
+                        conversation_history: conversationHistory
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Check if it's a clarification question
+                    if (data.is_clarification) {
+                        addMessage(data.answer, 'bot', [], true);
+                        // Don't add clarification to history
+                    } else {
+                        // Show rephrased query if available
+                        let answerText = data.answer;
+                        if (data.rephrased_query && data.rephrased_query !== question) {
+                            answerText = `<em>Understanding your question as: "${data.rephrased_query}"</em><br><br>${answerText}`;
+                        }
+                        
+                        addMessage(answerText, 'bot', data.sources);
+                        
+                        // Update conversation history (keep last 5 exchanges)
+                        conversationHistory.push({
+                            role: 'user',
+                            content: question
+                        });
+                        conversationHistory.push({
+                            role: 'assistant',
+                            content: data.answer
+                        });
+                        
+                        // Keep only last 10 messages (5 exchanges)
+                        if (conversationHistory.length > 10) {
+                            conversationHistory = conversationHistory.slice(-10);
+                        }
+                    }
+                } else {
+                    addMessage(`Error: ${data.detail}`, 'bot');
+                }
+            } catch (error) {
+                addMessage(`Error: ${error.message}`, 'bot');
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'Send';
+            }
+        }
+
+        function addMessage(text, type, sources = [], isClarification = false) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}-message`;
+            
+            if (isClarification) {
+                messageDiv.classList.add('clarification-message');
+            }
+
+            let content = `<div class="message-content">${text}</div>`;
+            
+            if (sources && sources.length > 0) {
+                content += '<div class="sources"><strong>📚 Found in these documents:</strong><ul>';
+                sources.forEach(source => {
+                    content += `<li>${source}</li>`;
+                });
+                content += '</ul></div>';
+            }
+            
+            // Add copy button for bot messages
+            if (type === 'bot') {
+                content += `<button class="copy-btn" onclick="copyMessage(this)" title="Copy message">
+                    📋 Copy
+                </button>`;
+            }
+
+            messageDiv.innerHTML = content;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function copyMessage(button) {
+            // Get the message content (excluding sources and copy button)
+            const messageDiv = button.closest('.message');
+            const messageContent = messageDiv.querySelector('.message-content');
+            const textToCopy = messageContent.innerText || messageContent.textContent;
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                // Visual feedback
+                const originalText = button.textContent;
+                button.textContent = '✅ Copied!';
+                button.style.background = '#28a745';
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.background = '';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                button.textContent = '❌ Failed';
+                setTimeout(() => {
+                    button.textContent = '📋 Copy';
+                }, 2000);
+            });
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        // Disable chat input initially
+        document.getElementById('question').disabled = true;
+        document.getElementById('send-btn').disabled = true;
+
+        // Auto-load documents on page load
+        window.addEventListener('load', () => {
+            listDocuments();
+        });
+    </script>
+</body>
+</html>
