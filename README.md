@@ -15,6 +15,10 @@ A production-ready RAG (Retrieval-Augmented Generation) chatbot that reads conte
 
 **🌐 Try it now:** [https://huggingface.co/spaces/Redfire-1234/google-doc-chatbot](https://huggingface.co/spaces/Redfire-1234/google-doc-chatbot)
 
+**📁 Sample Google Drive Folder:** [https://drive.google.com/drive/folders/10mrjWSDPWEkhDtS28ik8PDPjT2Qj23WZ?usp=sharing](https://drive.google.com/drive/folders/10mrjWSDPWEkhDtS28ik8PDPjT2Qj23WZ?usp=sharing)
+
+> **Note:** The live demo is already configured with this folder. You can test it immediately without any setup! Just click "Index All Documents" and start asking questions.
+
 ---
 
 ## ✨ Features
@@ -52,6 +56,23 @@ A production-ready RAG (Retrieval-Augmented Generation) chatbot that reads conte
 ---
 
 ## 📖 How to Use
+
+### **🎯 Quick Start (No Setup Required!)**
+
+1. **Visit the live demo**: [https://huggingface.co/spaces/Redfire-1234/google-doc-chatbot](https://huggingface.co/spaces/Redfire-1234/google-doc-chatbot)
+2. **Click** "📥 Index All Documents" (indexes the sample folder automatically)
+3. **Ask questions** like:
+   - "What is hatha yoga?"
+   - "Tell me about breathing techniques"
+   - "What are the key principles?"
+4. **Try follow-up questions** to see context awareness in action!
+
+**Sample folder contents:** Documents about Hatha Yoga, practices, and techniques  
+**View sample docs:** [Google Drive Folder](https://drive.google.com/drive/folders/10mrjWSDPWEkhDtS28ik8PDPjT2Qj23WZ?usp=sharing)
+
+---
+
+### **For Your Own Documents:**
 
 ### **1. Index Documents**
 Click **"📥 Index All Documents"** to process your Google Drive folder. The system will:
@@ -357,10 +378,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🔗 Links
 
-- **Live Demo**: [https://huggingface.co/spaces/Redfire-1234/google-doc-chatbot](https://huggingface.co/spaces/Redfire-1234/google-doc-chatbot)
-- **GitHub Repository**: [https://github.com/Redfire-1234/google-doc-chatbot](https://github.com/Redfire-1234/google-doc-chatbot)
-- **Documentation**: See `SETUP_AND_RUN.md` for detailed setup
-- **Deployment Guide**: See `HUGGINGFACE_DEPLOYMENT.md`
+- **🌐 Live Demo**: [https://huggingface.co/spaces/Redfire-1234/google-doc-chatbot](https://huggingface.co/spaces/Redfire-1234/google-doc-chatbot)
+- **📁 Sample Documents**: [Google Drive Folder](https://drive.google.com/drive/folders/10mrjWSDPWEkhDtS28ik8PDPjT2Qj23WZ?usp=sharing)
+- **💻 GitHub Repository**: [https://github.com/Redfire-1234/google-doc-chatbot](https://github.com/Redfire-1234/google-doc-chatbot)
+- **📚 Documentation**: See `SETUP_AND_RUN.md` for detailed setup
+- **🚀 Deployment Guide**: See `HUGGINGFACE_DEPLOYMENT.md`
 
 ---
 
